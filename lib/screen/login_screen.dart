@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:skillhub_api/model/login_response.dart';
 import 'package:skillhub_api/screen/create_account_screen.dart';
 import 'package:skillhub_api/screen/home_screen.dart';
+import 'package:skillhub_api/service/auth_service.dart';
 import 'package:skillhub_api/util/custom_nav.dart';
+import 'package:skillhub_api/util/secure_storage_service.dart';
 import 'package:skillhub_api/widget/custom_text_field.dart';
+
+import '../util/dialog_helper.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,8 +17,18 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  TextEditingController emailController = TextEditingController();
-  TextEditingController senhaController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController senhaController = TextEditingController();
+
+  final AuthService service = AuthService();
+  bool _inLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    emailController.text = "";
+    senhaController.text = "";
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +87,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   label: 'senha',
                   icon: Icons.lock_clock_outlined,
                   controller: senhaController,
+                  isPassword: true
+                  ,
                 ),
                 const SizedBox(
                   height: 30,
@@ -110,12 +127,21 @@ class _LoginScreenState extends State<LoginScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     onPressed: () {
-                      push(context, HomeScreen(),replace: true);
+                      _login();
                     },
-                    child: const Text(
-                      "Entrar",
-                      style: TextStyle(fontSize: 18, color: Colors.white),
-                    ),
+                    child: _inLoading
+                        ? const SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            "Entrar",
+                            style: TextStyle(fontSize: 18, color: Colors.white),
+                          ),
                   ),
                 ),
                 const SizedBox(
@@ -149,5 +175,36 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
+  }
+
+  void _login() async {
+    final email = emailController.text;
+    final senha = senhaController.text;
+
+    if (email.isEmpty || senha.isEmpty) {
+      await showAppDialog(context,
+          title: 'Atenção', message: 'Informe e-mail e senha.', isError: true);
+      return;
+    }
+    try {
+      setState(() => _inLoading = true);
+      final LoginResponse loginResponse =
+          await service.login(email: email, senha: senha);
+
+      await SecureStorageService.saveLogin(loginResponse);
+
+      if (!mounted) return;
+      push(context, HomeScreen(), replace: true);
+    } catch (e) {
+      if (!mounted) return;
+      await showAppDialog(context,
+          title: 'Erro',
+          message: e.toString().replaceAll('Exception: ', ''),
+          isError: true);
+    } finally {
+      if (mounted) {
+        setState(() => _inLoading = false);
+      }
+    }
   }
 }
