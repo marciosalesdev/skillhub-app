@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:skillhub_api/model/token_user.dart';
 import 'package:skillhub_api/screen/login_screen.dart';
 import 'package:skillhub_api/util/custom_nav.dart';
+import 'package:skillhub_api/util/secure_storage_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -10,6 +12,15 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _State extends State<HomeScreen> {
+  String nameUser = "";
+  String emailUser = "";
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarUser();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -26,7 +37,7 @@ class _State extends State<HomeScreen> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            const DrawerHeader(
+            DrawerHeader(
               decoration: BoxDecoration(color: Color(0xFF0A0A0F)),
               child: Center(
                   child: Column(
@@ -37,8 +48,11 @@ class _State extends State<HomeScreen> {
                     color: Colors.white,
                   ),
                   Text(
-                    'Marcio Sales',
+                    nameUser,
                     style: TextStyle(fontSize: 25, color: Colors.white),
+                  ),  Text(
+                    emailUser,
+                    style: TextStyle(fontSize: 18, color: Colors.white),
                   ),
                 ],
               )),
@@ -65,7 +79,7 @@ class _State extends State<HomeScreen> {
                 leading: Icon(Icons.exit_to_app),
                 title: Text('Sair'),
                 onTap: () {
-                  push(context, LoginScreen(), replace: true);
+                 _logout();
                 })
           ],
         ),
@@ -76,7 +90,27 @@ class _State extends State<HomeScreen> {
 
   _body() {
     return Center(
-      child: Text('data'),
+      child: Text(
+        'Nome Usuario: $nameUser',
+        style: TextStyle(fontSize: 20),
+      ),
     );
   }
+
+  _logout() async{
+    await SecureStorageService.clear();
+    push(context, LoginScreen(), replace: true);
+  }
+  _carregarUser() async {
+    TokenUser? _user = await SecureStorageService.getLoggedUser();
+
+    setState(() {
+      if (_user != null) {
+        nameUser = _user.name;
+        emailUser = _user.email;
+        print(_user);
+      }
+    });
+  }
+
 }
